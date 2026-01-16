@@ -1,3 +1,3 @@
 echo "Checking configuration..."
-grep "Version" app-config.txt
+grep "Version" config.txt
 echo "Deployment Successful!"

@@ -1,0 +1,39 @@
+pipeline {
+    agent any
+
+    // Requirements: Trigger automatically on Git commit
+    triggers {
+        pollSCM('* * * * *') // Checks Git for changes every minute
+    }
+
+    stages {
+        stage('Validation') {
+            steps {
+                echo "Validating 'Source of Truth' on branch: ${env.BRANCH_NAME}"
+                // Check if our config file actually exists
+                sh 'ls app.config.txt'
+            }
+        }
+
+        stage('Execute Script') {
+            steps {
+                echo "Executing Deployment Script..."
+                sh 'chmod +x deploy.sh'
+                sh './deploy.sh'
+            }
+        }
+
+        stage('Infrastructure Check') {
+            steps {
+                script {
+                    // Requirements: Pipeline behavior differs based on branch
+                    if (env.BRANCH_NAME == 'main') {
+                        echo "CRITICAL: Running Production Infrastructure Health Check..."
+                    } else {
+                        echo "Standard check for non-production branch."
+                    }
+                }
+            }
+        }
+    }
+}

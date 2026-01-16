@@ -6,41 +6,39 @@ pipeline {
     stages {
         stage('Validation') {
             steps {
-                echo "Validating Environment..."
-                sh "docker version" 
+                echo "Validating Docker Environment..."
+                sh "sudo docker version" 
             }
         }
         stage('Build & Deploy') {
             steps {
                 script {
-                    // This print statement is vital for your demo debugging
-                    echo "Jenkins detected Branch Name: ${env.BRANCH_NAME}"
+                    // Try to get branch name from different possible Jenkins variables
+                    def branch = env.BRANCH_NAME ?: env.GIT_BRANCH ?: "unknown"
                     
-                    // Move into the folder where your code lives
+                    // Clean up branch name (removes 'origin/' if it exists)
+                    branch = branch.replaceAll('origin/', '')
+                    echo "--- PROCESSED BRANCH NAME: ${branch} ---"
+                    
                     dir('jen-demo') {
-                        if (env.BRANCH_NAME == 'main') {
-                            echo "--- DEPLOYING TO DEV ENVIRONMENT (Port 8081) ---"
+                        if (branch == 'main') {
+                            echo "--- DEPLOYING TO DEV (8081) ---"
                             sh "sudo docker build -t ${IMAGE_NAME}:dev ."
                             sh "sudo docker rm -f dev-container || true"
                             sh "sudo docker run -d --name dev-container -p 8081:80 ${IMAGE_NAME}:dev"
                         } 
-                        else if (env.BRANCH_NAME == 'branch1') {
-                            echo "--- DEPLOYING TO PROD ENVIRONMENT (Port 8082) ---"
+                        else if (branch == 'branch1') {
+                            echo "--- DEPLOYING TO BRANCH1 (8082) ---"
                             sh "sudo docker build -t ${IMAGE_NAME}:prod ."
                             sh "sudo docker rm -f prod-container || true"
                             sh "sudo docker run -d --name prod-container -p 8082:80 ${IMAGE_NAME}:prod"
                         }
                         else {
-                            echo "Branch ${env.BRANCH_NAME} is not configured for auto-deploy."
+                            echo "ERROR: Branch '${branch}' does not match 'main' or 'branch1'."
                         }
                     }
                 }
             }
-        }
-    }
-    post {
-        success {
-            echo "Deployment successful! Check your VM IP at port 8081 (Dev) or 8082 (Prod)."
         }
     }
 }

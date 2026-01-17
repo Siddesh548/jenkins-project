@@ -1,3 +1,46 @@
+// pipeline {
+//     agent any
+//     environment {
+//         IMAGE_NAME = "gitops-app"
+//     }
+//     stages {
+//         stage('Validation') {
+//             steps {
+//                 echo "Validating Docker Environment..."
+//                 sh "sudo docker version" 
+//             }
+//         }
+//         stage('Build & Deploy') {
+//             steps {
+//                 script {
+//                     def branch = env.BRANCH_NAME ?: env.GIT_BRANCH ?: "unknown"
+                    
+//                     branch = branch.replaceAll('origin/', '')
+//                     echo "--- PROCESSED BRANCH NAME: ${branch} ---"
+                    
+//                     dir('jen-demo') {
+//                         if (branch == 'main') {
+//                             echo "--- DEPLOYING TO DEV (8081) ---"
+//                             sh "sudo docker pull nginx "
+//                             sh "sudo docker rm -f dev-container || true"
+//                             sh "sudo docker run -d --name dev-container -p 8081:80 ${IMAGE_NAME}:dev"
+//                         } 
+//                         else if (branch == 'branch1') {
+//                             echo "--- DEPLOYING TO BRANCH1 (8082) ---"
+//                             sh "sudo docker build -t ${IMAGE_NAME}:prod ."
+//                             sh "sudo docker rm -f prod-container || true"
+//                             sh "sudo docker run -d --name prod-container -p 8082:80 ${IMAGE_NAME}:prod"
+//                         }
+//                         else {
+//                             echo "ERROR: Branch '${branch}' does not match 'main' or 'branch1'."
+//                         }
+//                     }
+//                 }
+//             }
+//         }
+//     }
+// }
+
 pipeline {
     agent any
     environment {
@@ -10,33 +53,41 @@ pipeline {
                 sh "sudo docker version" 
             }
         }
-        stage('Build & Deploy') {
+
+        stage('Deploy to Dev (Main)') {
+            // This stage only runs if the branch being scanned is 'main'
+            when {
+                branch 'main'
+            }
             steps {
-                script {
-                    def branch = env.BRANCH_NAME ?: env.GIT_BRANCH ?: "unknown"
-                    
-                    branch = branch.replaceAll('origin/', '')
-                    echo "--- PROCESSED BRANCH NAME: ${branch} ---"
-                    
-                    dir('jen-demo') {
-                        if (branch == 'main') {
-                            echo "--- DEPLOYING TO DEV (8081) ---"
-                            sh "sudo docker pull nginx "
-                            sh "sudo docker rm -f dev-container || true"
-                            sh "sudo docker run -d --name dev-container -p 8081:80 ${IMAGE_NAME}:dev"
-                        } 
-                        else if (branch == 'branch1') {
-                            echo "--- DEPLOYING TO BRANCH1 (8082) ---"
-                            sh "sudo docker build -t ${IMAGE_NAME}:prod ."
-                            sh "sudo docker rm -f prod-container || true"
-                            sh "sudo docker run -d --name prod-container -p 8082:80 ${IMAGE_NAME}:prod"
-                        }
-                        else {
-                            echo "ERROR: Branch '${branch}' does not match 'main' or 'branch1'."
-                        }
-                    }
+                dir('jen-demo') {
+                    echo "--- DEPLOYING TO DEV (PORT 8081) ---"
+                    sh "sudo docker pull nginx" // Note: You might want to build your IMAGE_NAME here instead of pulling nginx
+                    sh "sudo docker rm -f dev-container || true"
+                    sh "sudo docker run -d --name dev-container -p 8081:80 ${IMAGE_NAME}:dev"
                 }
             }
+        }
+
+        stage('Deploy to Branch1 (Prod)') {
+            // This stage only runs if the branch being scanned is 'branch1'
+            when {
+                branch 'branch1'
+            }
+            steps {
+                dir('jen-demo') {
+                    echo "--- DEPLOYING TO BRANCH1 (PORT 8082) ---"
+                    sh "sudo docker build -t ${IMAGE_NAME}:prod ."
+                    sh "sudo docker rm -f prod-container || true"
+                    sh "sudo docker run -d --name prod-container -p 8082:80 ${IMAGE_NAME}:prod"
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            echo "Pipeline finished for branch: ${env.BRANCH_NAME}"
         }
     }
 }

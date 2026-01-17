@@ -57,7 +57,7 @@ pipeline {
         stage('Deploy to Dev (Main)') {
             // This stage only runs if the branch being scanned is 'main'
             when {
-                branch 'main'
+                expression { env.BRANCH_NAME == 'main' }
             }
             steps {
                 dir('jen-demo') {
@@ -72,7 +72,7 @@ pipeline {
         stage('Deploy to Branch1 (Prod)') {
             // This stage only runs if the branch being scanned is 'branch1'
             when {
-                branch 'branch1'
+                expression { env.BRANCH_NAME == 'branch1' }
             }
             steps {
                 dir('jen-demo') {

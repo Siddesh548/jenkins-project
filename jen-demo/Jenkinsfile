@@ -49,7 +49,6 @@ pipeline {
     stages {
         stage('Debug Info') {
             steps {
-                // This will tell us EXACTLY why the next stages are skipping
                 script {
                     echo "FULL BRANCH NAME: ${env.BRANCH_NAME}"
                     echo "GIT BRANCH: ${env.GIT_BRANCH}"
